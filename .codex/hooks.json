@@ -1,0 +1,43 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/project_session_start.py\"",
+            "timeout": 5,
+            "statusMessage": "Loading dream_welcomer context"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/project_bash_guard.py\"",
+            "timeout": 5,
+            "statusMessage": "Checking dream_welcomer command conventions"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/project_stop_check.py\"",
+            "timeout": 35,
+            "statusMessage": "Running dream_welcomer stop checks"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -72,16 +72,16 @@ function findTags(message: string) {
     .map(([tag]) => tag);
 }
 
-function findProductsByName(message: string) {
+function findProductsByName(message: string, catalog: Product[]) {
   const lower = message.toLowerCase();
-  return products.filter((product) => lower.includes(product.name.toLowerCase()));
+  return catalog.filter((product) => lower.includes(product.name.toLowerCase()));
 }
 
-function parseRuleBased(message: string): AssistantFilters {
+function parseRuleBased(message: string, catalog: Product[]): AssistantFilters {
   const category = findCategory(message);
   const maxPrice = findMaxPrice(message);
   const tags = findTags(message);
-  const namedProducts = findProductsByName(message);
+  const namedProducts = findProductsByName(message, catalog);
   const orderId = message.match(/DW-\d{4}/i)?.[0]?.toUpperCase();
   const wantsCompare = /对比|比较|compare|差别|区别/i.test(message);
   const wantsOrder = /订单|物流|快递|发货|order/i.test(message);
@@ -98,10 +98,13 @@ function parseRuleBased(message: string): AssistantFilters {
   });
 }
 
-async function parseWithLangChain(message: string) {
+async function parseWithLangChain(message: string, catalog: Product[]) {
   if (!process.env.OPENAI_API_KEY) return null;
 
   try {
+    const productHints = catalog
+      .map((product) => `${product.id}: ${product.name} (${product.category})`)
+      .join("\n");
     const langchainPackage = "@langchain/openai";
     const { ChatOpenAI } = (await import(langchainPackage)) as {
       ChatOpenAI: new (options: { model: string; temperature: number }) => {
@@ -126,7 +129,7 @@ async function parseWithLangChain(message: string) {
     return await structuredModel.invoke([
       [
         "system",
-        "Extract e-commerce shopping filters from the user's Chinese or English message. Use only the known categories and product IDs when clear.",
+        `Extract e-commerce shopping filters from the user's Chinese or English message. Use only these categories: laptop, audio, home, wearable, travel, beauty. Known products:\n${productHints}`,
       ],
       ["human", message],
     ]);
@@ -174,14 +177,17 @@ function buildReply(filters: AssistantFilters, matchedProducts: Product[], compa
   return `${priceNote}我会优先看 ${topNames}。第一件更稳妥的是 ${top[0].name}：${top[0].summary}`;
 }
 
-export async function answerShoppingQuestion(message: string): Promise<AssistantResult> {
-  const ruleBased = parseRuleBased(message);
-  const aiFilters = await parseWithLangChain(message);
+export async function answerShoppingQuestion(
+  message: string,
+  catalog: Product[] = products,
+): Promise<AssistantResult> {
+  const ruleBased = parseRuleBased(message, catalog);
+  const aiFilters = await parseWithLangChain(message, catalog);
   const filters = mergeFilters(ruleBased, aiFilters);
-  const matchedProducts = filterProducts(products, filters);
+  const matchedProducts = filterProducts(catalog, filters);
   const compareProducts =
     filters.compareIds && filters.compareIds.length > 0
-      ? products.filter((product) => filters.compareIds?.includes(product.id))
+      ? catalog.filter((product) => filters.compareIds?.includes(product.id))
       : matchedProducts.slice(0, 3);
   const order = filters.orderId ? getOrderById(filters.orderId) ?? null : null;
 
