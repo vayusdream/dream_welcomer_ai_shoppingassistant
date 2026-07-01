@@ -2,7 +2,7 @@
 
 Small e-commerce AI shopping guide built with Next.js, React, TypeScript, Tailwind CSS, LangChain, Zod, PostgreSQL, and pnpm.
 
-preview link：https://dream-welcomer-ai-shoppingassistant.vercel.app/
+demo：https://dream-welcomer-ai-shoppingassistant.vercel.app/
 
 ## Stack
 
